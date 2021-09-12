@@ -10,12 +10,16 @@ class App extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      isConnected: false
+      isConnected: false,
+      address: "",
+      network: ""
     };
   }
 
-  getAddress = async () => {
-    
+  componentDidMount() {
+    if (localStorage.getItem('walletConnected') === 'true') {
+      this.connectWallet()
+    }
   }
 
   connectWallet = async () => {
@@ -23,7 +27,12 @@ class App extends React.Component {
       let app = new Application({ opt: { web3Connection: 'WEB3_LINK' } });
       if (app) {
         await app.login();
-        this.setState({ isConnected: true });
+        this.setState({
+          isConnected: true,
+          address: await app.getAddress(),
+          network: await app.getETHNetwork()
+        });
+        localStorage.setItem('walletConnected', 'true');
       }
     }
   }
@@ -32,7 +41,14 @@ class App extends React.Component {
     return (
       <div className="App">
         <h1>Stacking App</h1>
-        <p>{this.state.data}</p>
+        {this.state.isConnected ?
+          <div>
+            <p>{this.state.address}</p>
+            <p>{this.state.network}</p>
+          </div> :
+          ""
+        }
+
         <button onClick={this.connectWallet}>
           {!this.state.isConnected ? "Connect to Metamask" : "Connected"}
         </button>

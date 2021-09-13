@@ -13,7 +13,9 @@ class App extends React.Component {
       isConnected: false,
       address: "",
       appNetwork: 'Kovan',
-      network: ""
+      network: "",
+      stakingContractAvailableTokens: null,
+      stackingContractAddress: ''
     };
   }
 
@@ -30,23 +32,7 @@ class App extends React.Component {
     return false
   }
 
-  // Detect Metamask account change
-  onNetworkChange() {
-    window.addEventListener("load", function () {
-      if (window.ethereum) {
-        // Reload browser on Web3 Network change
-        window.ethereum.on('chainChanged', (_chainId) => window.location.reload());
-      }
-    });
-  }
-
-  componentDidMount() {
-    if (localStorage.getItem('walletConnected') === 'true') {
-      this.connectWallet()
-      this.onNetworkChange()
-    }
-  }
-
+  // connect wallet via bepro-js
   connectWallet = async () => {
     if (!this.state.isConnected) {
 
@@ -69,14 +55,49 @@ class App extends React.Component {
     }
   }
 
+  // Initialize staking contract via bepro-js
+  initStakingContract = async () => {
+    let staking = new StakingContract({
+      tokenAddress: '0x851f72005b5930625202afb45dbde6f48a2618f6',
+      contractAddress: '0xB3C1d743C83e671DF677165c30Ef7b3F38276756', /* Contract Address (optional) */
+      opt: { web3Connection: 'WEB3_LINK' }
+    })
+
+    await staking.login();
+    await staking.__assert();
+    this.setState({
+      stakingContractAvailableTokens: await staking.availableTokens(),
+      stackingContractAddress: await staking.erc20()
+    });
+
+  }
+
+  // Detect Metamask account change
+  onNetworkChange() {
+    window.addEventListener("load", function () {
+      if (window.ethereum) {
+        // Reload browser on Web3 Network change
+        window.ethereum.on('chainChanged', (_chainId) => window.location.reload());
+      }
+    });
+  }
+
+  componentDidMount() {
+    if (localStorage.getItem('walletConnected') === 'true') {
+      this.connectWallet()
+      this.onNetworkChange()
+      this.initStakingContract()
+    }
+  }
+
   render() {
     return (
       <div className="App">
         <h1>Stacking App</h1>
         {this.state.isConnected ?
           <div>
-            <p>{this.state.address}</p>
-            <p>{this.state.network}</p>
+            <p>Wallet address: <small>{this.state.address}</small></p>
+            <p>Network: <small>{this.state.network}</small></p>
           </div> :
           ""
         }
@@ -86,6 +107,13 @@ class App extends React.Component {
         </button>
         <p> {((this.state.network !== this.state.appNetwork && this.state.isWeb3Detected && this.state.isConnected) ? 'Please connect to Kovan Network' : '')}</p>
         <p> {((!this.state.isWeb3Detected) ? 'Please install Metamask' : '')}</p>
+
+        <button onClick={this.stakingContract}>
+          Staking
+        </button>
+
+        <p> {this.state.stakingContractAvailableTokens ? 'Available Tokens: ' + this.state.stakingContractAvailableTokens : ''} </p>
+        <p> {this.state.stackingContractAddress ? 'Contract address: ' + this.state.stackingContractAddress : ''} </p>
       </div>
     );
   }
